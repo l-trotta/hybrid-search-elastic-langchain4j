@@ -41,10 +41,6 @@ public class HybridSearchArticle {
         String ollamaUrl = System.getenv("ollama-url");
         String ollamaModelName = System.getenv("model-name");
 
-        File initialFile = new File("src/main/resources/scifi_1000.csv");
-        InputStream csvContentStream = new FileInputStream(initialFile);
-
-        CsvMapper csvMapper = new CsvMapper();
         CsvSchema schema = CsvSchema.builder()
             .addColumn("movie_id") // same order as in the csv
             .addColumn("movie_name")
@@ -53,7 +49,13 @@ public class HybridSearchArticle {
             .addColumn("description")
             .addColumn("director")
             .setColumnSeparator(',')
+            .setSkipFirstDataRow(true)
             .build();
+
+        CsvMapper csvMapper = new CsvMapper();
+
+        File initialFile = new File("src/main/resources/scifi_1000.csv");
+        InputStream csvContentStream = new FileInputStream(initialFile);
 
         MappingIterator<Movie> it = csvMapper
             .readerFor(Movie.class)
