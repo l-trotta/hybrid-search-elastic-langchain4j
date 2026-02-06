@@ -104,7 +104,7 @@ public class HybridSearchArticle {
             embeddingStore.addAll(embeddings, embedded);
 
             // "default" is the default name of the index if no other is set in the vector store configuration
-            // calling the refresh endpoint to be absolutely sure that every movie has been indexed and is available for searching. 
+            // calling the refresh endpoint to be absolutely sure that every movie has been indexed and is available for searching.
             restClient.performRequest(new Request("GET", "/default/_refresh"));
 
 
@@ -115,7 +115,7 @@ public class HybridSearchArticle {
             ElasticsearchContentRetriever contentRetrieverVector = ElasticsearchContentRetriever.builder()
                 .restClient(restClient)
                 .configuration(ElasticsearchConfigurationKnn.builder().build())
-                .maxResults(3)
+                .maxResults(5)
                 .embeddingModel(embeddingModel)
                 .build();
 
@@ -128,7 +128,7 @@ public class HybridSearchArticle {
             ElasticsearchContentRetriever contentRetrieverHybrid = ElasticsearchContentRetriever.builder()
                 .restClient(restClient)
                 .configuration(ElasticsearchConfigurationHybrid.builder().build())
-                .maxResults(3)
+                .maxResults(5)
                 .embeddingModel(embeddingModel)
                 .build();
 
