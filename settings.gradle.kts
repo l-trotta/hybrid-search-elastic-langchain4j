@@ -1,0 +1,1 @@
+rootProject.name = "HybridSearchLangchain4j"
