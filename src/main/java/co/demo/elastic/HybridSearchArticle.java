@@ -33,7 +33,7 @@ import java.util.List;
 
 public class HybridSearchArticle {
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException {
 
         String elasticsearchServerUrl = System.getenv("server-url");
         String elasticsearchApiKey = System.getenv("api-key");
