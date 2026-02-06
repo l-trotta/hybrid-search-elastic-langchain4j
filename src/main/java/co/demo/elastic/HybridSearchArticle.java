@@ -103,6 +103,8 @@ public class HybridSearchArticle {
 
             embeddingStore.addAll(embeddings, embedded);
 
+            // "default" is the default name of the index if no other is set in the vector store configuration
+            // calling the refresh endpoint to be absolutely sure that every movie has been indexed and is available for searching. 
             restClient.performRequest(new Request("GET", "/default/_refresh"));
 
 
