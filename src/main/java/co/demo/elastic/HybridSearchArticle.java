@@ -23,13 +23,11 @@ import org.apache.http.message.BasicHeader;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.RestClient;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,8 +41,24 @@ public class HybridSearchArticle {
         String ollamaUrl = System.getenv("ollama-url");
         String ollamaModelName = System.getenv("model-name");
 
-        String moviesUrl = "https://gist.githubusercontent.com/ssh-esh/103fb8220de3b0e045393760c2f36575/raw" +
-                          "/f56342573d8e28e69baff307ebb1a46833fe1ce1/scifi_1000.csv";
+        File initialFile = new File("src/main/resources/scifi_1000.csv");
+        InputStream csvContentStream = new FileInputStream(initialFile);
+
+        CsvMapper csvMapper = new CsvMapper();
+        CsvSchema schema = CsvSchema.builder()
+            .addColumn("movie_id") // same order as in the csv
+            .addColumn("movie_name")
+            .addColumn("year")
+            .addColumn("genre")
+            .addColumn("description")
+            .addColumn("director")
+            .setColumnSeparator(',')
+            .build();
+
+        MappingIterator<Movie> it = csvMapper
+            .readerFor(Movie.class)
+            .with(schema)
+            .readValues(new InputStreamReader(csvContentStream));
 
         try (RestClient restClient = RestClient
             .builder(HttpHost.create(elasticsearchServerUrl))
@@ -62,31 +76,6 @@ public class HybridSearchArticle {
                 .restClient(restClient)
                 .build();
 
-            CsvMapper csvMapper = new CsvMapper();
-            CsvSchema schema = CsvSchema.builder()
-                .addColumn("movie_id") // same order as in the csv
-                .addColumn("movie_name")
-                .addColumn("year")
-                .addColumn("genre")
-                .addColumn("description")
-                .addColumn("director")
-                .setColumnSeparator(',')
-                .build();
-
-            HttpClient httpClient = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(moviesUrl))
-                .build();
-
-            HttpResponse<InputStream> response = httpClient.send(request,
-                HttpResponse.BodyHandlers.ofInputStream());
-            InputStream csvContentStream = response.body();
-
-            MappingIterator<Movie> it = csvMapper
-                .readerFor(Movie.class)
-                .with(schema)
-                .readValues(new InputStreamReader(csvContentStream));
-
             List<Embedding> embeddings = new ArrayList<>();
             List<TextSegment> embedded = new ArrayList<>();
 
@@ -99,7 +88,11 @@ public class HybridSearchArticle {
 
                     Embedding embedding = embeddingModel.embed(text).content();
                     embeddings.add(embedding);
-                    embedded.add(new TextSegment(text, new Metadata()));
+
+                    Metadata metadata = new Metadata();
+                    metadata.put("movie_name", movie.movie_name());
+                    embedded.add(new TextSegment(text, metadata));
+
                     hasNext = it.hasNextValue();
                 } catch (JsonParseException | InvalidFormatException e) {
                     // ignore malformed data
@@ -124,10 +117,9 @@ public class HybridSearchArticle {
 
             List<Content> vectorSearchResult = contentRetrieverVector.retrieve(Query.from(query));
 
-            System.out.println("Vector search results: " + vectorSearchResult);
-            System.out.println(vectorSearchResult.getFirst().textSegment());
-            System.out.println(vectorSearchResult.get(1).textSegment());
-            System.out.println(vectorSearchResult.get(2).textSegment());
+            System.out.println("Vector search results:");
+            vectorSearchResult.forEach(v -> System.out.println(v.textSegment().metadata().getString(
+                "movie_name")));
 
             ElasticsearchContentRetriever contentRetrieverHybrid = ElasticsearchContentRetriever.builder()
                 .restClient(restClient)
@@ -138,10 +130,9 @@ public class HybridSearchArticle {
 
             List<Content> hybridSearchResult = contentRetrieverHybrid.retrieve(Query.from(query));
 
-            System.out.println("Hybrid search results: " + hybridSearchResult);
-            System.out.println(hybridSearchResult.getFirst().textSegment());
-            System.out.println(hybridSearchResult.get(1).textSegment());
-            System.out.println(hybridSearchResult.get(2).textSegment());
+            System.out.println("Hybrid search results:");
+            hybridSearchResult.forEach(v -> System.out.println(v.textSegment().metadata().getString(
+                "movie_name")));
         }
     }
 }
