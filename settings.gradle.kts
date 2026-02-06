@@ -1,1 +1,1 @@
-rootProject.name = "HybridSearchLangchain4j"
+rootProject.name = "hybrid-search-elastic-langchain4j"
